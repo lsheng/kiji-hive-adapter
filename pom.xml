@@ -43,6 +43,7 @@
   <modules>
     <module>build-resources</module>
     <module>kiji-hive-adapter</module>
+    <module>kiji-hive-library</module>
   </modules>
 
   <build>
