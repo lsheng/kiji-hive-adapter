@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NavigableMap;
 
 import com.google.common.base.Preconditions;
@@ -72,6 +73,8 @@ public final class HiveTableDescription {
     private List<String> mColumnExpressions;
 
     private String mEntityIdShellStringColumn;
+
+    private Map<KijiColumnName, Integer> mCellPagingMap;
 
     /** True if we already built an object. */
     private boolean mIsBuilt = false;
@@ -123,6 +126,24 @@ public final class HiveTableDescription {
         String entityIdShellStringColumn) {
       checkNotBuilt();
       mEntityIdShellStringColumn = entityIdShellStringColumn;
+      return this;
+    }
+
+    /**
+     * Sets the configuration for cell level paging.
+     *
+     * @param cellPagingMap map of column names to page sizes.
+     * @return This instance
+     */
+    public HiveTableDescriptionBuilder withCellPagingMap(Map<String, String> cellPagingMap) {
+      checkNotBuilt();
+      Map<KijiColumnName, Integer> convertedCellPagingMap = Maps.newHashMap();
+      for (Entry<String, String> entry : cellPagingMap.entrySet()) {
+        KijiColumnName kijiColumnName = new KijiColumnName(entry.getKey());
+        Integer pageSize = Integer.valueOf(entry.getValue());
+        convertedCellPagingMap.put(kijiColumnName, pageSize);
+      }
+      mCellPagingMap = convertedCellPagingMap;
       return this;
     }
 
@@ -191,7 +212,13 @@ public final class HiveTableDescription {
     }
     // TODO(KIJIHIVE-30) Process EntityId component columns here.
 
-    mDataRequest = DataRequestOptimizer.getDataRequest(mExpressions);
+    KijiDataRequest dataRequest = DataRequestOptimizer.getDataRequest(mExpressions);
+    if (builder.mCellPagingMap != null) {
+      KijiDataRequest pagedDataRequest =
+          DataRequestOptimizer.addCellPaging(dataRequest, builder.mCellPagingMap);
+      dataRequest = pagedDataRequest;
+    }
+    mDataRequest = dataRequest;
   }
 
   /**

@@ -58,6 +58,8 @@ public class KijiTableRecordReader
   private final KijiRowScanner mScanner;
   private final Iterator<KijiRowData> mIterator;
 
+  private KijiRowDataWritable mCurrentPagedKijiRowDataWritable = null;
+
   /**
    * Constructor.
    *
@@ -133,14 +135,49 @@ public class KijiTableRecordReader
   /** {@inheritDoc} */
   @Override
   public boolean next(ImmutableBytesWritable key, KijiRowDataWritable value) throws IOException {
+    if (mCurrentPagedKijiRowDataWritable != null
+        && mCurrentPagedKijiRowDataWritable.hasMorePages()) {
+      return nextPage(key, value);
+    }
+
+    // Stop if there are no more rows.
     if (!mIterator.hasNext()) {
       return false;
     }
     final HBaseKijiRowData rowData = (HBaseKijiRowData) mIterator.next();
     final KijiRowDataWritable result = new KijiRowDataWritable(rowData);
 
+    if (result.hasMorePages()) {
+      // This is a paged row, so configure this reader to handle the paging.
+      mCurrentPagedKijiRowDataWritable = result;
+      return nextPage(key, value);
+    }
+
     key.set(rowData.getHBaseResult().getRow());
     Writables.copyWritable(result, value);
+    return true;
+  }
+
+  /**
+   * Helper function for next that processes a paged result.
+   * @param key for this row
+   * @param value containing a KijiRowDataWritable with a page of data.
+   * @return true if there was more data
+   *
+   * @throws IOException if there was an error
+   */
+  private boolean nextPage(ImmutableBytesWritable key, KijiRowDataWritable value)
+      throws IOException {
+    // Next page stuff
+    final KijiRowDataWritable.KijiRowDataPageWritable result = mCurrentPagedKijiRowDataWritable
+        .nextPage();
+    key.set(mCurrentPagedKijiRowDataWritable.getEntityId().getHBaseRowKey());
+    Writables.copyWritable(result, value);
+
+    if (!mCurrentPagedKijiRowDataWritable.hasMorePages()) {
+      // If we're out of pages, clear this so that we can move on.
+      mCurrentPagedKijiRowDataWritable = null;
+    }
     return true;
   }
 }
