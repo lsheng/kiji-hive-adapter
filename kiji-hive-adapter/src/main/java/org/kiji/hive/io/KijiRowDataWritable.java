@@ -182,6 +182,19 @@ public class KijiRowDataWritable implements Writable {
       mPageData = pageData;
     }
 
+    /**
+     * Returns whether this KijiRowDataPageWritable has any paged cells to be substituted.
+     * @return whether this KijiRowDataPageWritable has any paged cells to be substituted.
+     */
+    public boolean isEmpty() {
+      for (NavigableMap<Long, KijiCellWritable> values : mPageData.values()) {
+        if (!values.isEmpty()) {
+          return false;
+        }
+      }
+      return true;
+    }
+
     /** {@inheritDoc} */
     @Override
     public void write(DataOutput out) throws IOException {
@@ -398,7 +411,7 @@ public class KijiRowDataWritable implements Writable {
     for (Entry<KijiColumnName, NavigableMap<Long, KijiCellWritable>> entry
         : mWritableData.entrySet()) {
       KijiColumnName kijiColumnName = entry.getKey();
-      if (pageData.containsKey(kijiColumnName)) {
+      if (!pageData.containsKey(kijiColumnName)) {
         // Only write if it's not part of the paged data.
         writeColumn(out, kijiColumnName, entry.getValue());
       }

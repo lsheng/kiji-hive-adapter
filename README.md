@@ -122,7 +122,7 @@ Note that you'll likely need to comma delimit the entries, so if you wanted to p
 info:track_plays column and the info:next_song_rec column, it'd look like the following:
 
     'kiji.cell.paging.info:track_plays' = '10',
-    'kiji.cell.paging.info:next_song_rec' = '5' 
+    'kiji.cell.paging.info:next_song_rec' = '5'
 
 ### Sample Queries
 
